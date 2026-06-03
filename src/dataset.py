@@ -18,6 +18,9 @@ data/
 
 如果暂时没有 train/val/test 三个子目录，也可以直接把类别文件夹放在 data/ 下，
 程序会自动按 70%/15%/15% 划分训练、验证、测试集。
+
+Kaggle 的 New Plant Diseases Dataset 解压后目录比较深，并且验证集叫 valid。
+本模块会自动识别这种结构，减少初学阶段手动整理数据的麻烦。
 """
 
 from pathlib import Path
@@ -77,6 +80,28 @@ def _has_class_folders(path: Path) -> bool:
     return path.exists() and any(child.is_dir() for child in path.iterdir())
 
 
+def _find_split_root(data_dir: Path) -> Path:
+    """寻找真正包含 train/val 或 train/valid 的数据目录。
+
+    有些 Kaggle 数据集解压后会出现多层同名目录，例如：
+    data/New Plant Diseases Dataset(Augmented)/New Plant Diseases Dataset(Augmented)/train
+    直接把 config.data_dir 设为 data 时，程序需要自动向下寻找真正的数据根目录。
+    """
+
+    if (data_dir / "train").exists():
+        return data_dir
+
+    for child in data_dir.rglob("train"):
+        if not child.is_dir():
+            continue
+        candidate = child.parent
+        has_val = (candidate / "val").exists() or (candidate / "valid").exists()
+        if has_val and _has_class_folders(child):
+            return candidate
+
+    return data_dir
+
+
 def _split_dataset_indices(dataset_size: int, seed: int):
     """在只有 data/类别名/图片 的情况下自动划分数据集。"""
 
@@ -100,9 +125,11 @@ def build_dataloaders(config):
     返回值包含三个 DataLoader 和 class_names，后续创建模型时需要类别数量。
     """
 
-    data_dir = Path(config.data_dir)
+    data_dir = _find_split_root(Path(config.data_dir))
     train_dir = data_dir / "train"
     val_dir = data_dir / "val"
+    if not _has_class_folders(val_dir):
+        val_dir = data_dir / "valid"
     test_dir = data_dir / "test"
 
     train_transform = get_train_transform(config.image_size, config.use_augmentation)
@@ -113,12 +140,16 @@ def build_dataloaders(config):
         class_names = train_dataset.classes
 
         if not _has_class_folders(val_dir):
-            raise FileNotFoundError("已检测到 data/train，但缺少 data/val 验证集目录。")
-        if not _has_class_folders(test_dir):
-            raise FileNotFoundError("已检测到 data/train，但缺少 data/test 测试集目录。")
+            raise FileNotFoundError("已检测到 train，但缺少 val 或 valid 验证集目录。")
 
         val_dataset = datasets.ImageFolder(val_dir, transform=eval_transform)
-        test_dataset = datasets.ImageFolder(test_dir, transform=eval_transform)
+        if _has_class_folders(test_dir):
+            test_dataset = datasets.ImageFolder(test_dir, transform=eval_transform)
+        else:
+            # Kaggle 这个数据集的 test/test 目录只有少量无类别标签图片，不能用于
+            # ImageFolder 测试集评估。这里暂时复用验证集，保证训练流程完整可运行。
+            print("提示：未找到带类别子文件夹的 test 目录，测试阶段将暂时使用验证集。")
+            test_dataset = val_dataset
 
     elif _has_class_folders(data_dir):
         base_train_dataset = datasets.ImageFolder(data_dir, transform=train_transform)

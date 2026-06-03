@@ -5,6 +5,7 @@
 
 import argparse
 from pathlib import Path
+from typing import cast
 
 import torch
 from PIL import Image
@@ -50,7 +51,9 @@ def predict_image(model, image_path: str | Path, class_names: list[str], image_s
 
     transform = get_eval_transform(image_size)
     image = Image.open(image_path).convert("RGB")
-    image_tensor = transform(image).unsqueeze(0).to(device)
+    # transform 最后包含 ToTensor，因此这里的结果是形状为 [3, H, W] 的 torch.Tensor。
+    tensor = cast(torch.Tensor, transform(image))
+    image_tensor = tensor.unsqueeze(0).to(device)
 
     with torch.no_grad():
         logits = model(image_tensor)
