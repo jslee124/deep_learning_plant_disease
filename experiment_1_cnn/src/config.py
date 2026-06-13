@@ -18,7 +18,9 @@ class TrainConfig:
     """
 
     project_root: Path = Path(__file__).resolve().parents[1]
-    data_dir: Path = project_root / "data"
+    workspace_root: Path = project_root.parent
+    # 两个平时实验和课程设计共用仓库根目录中的数据，避免复制大型数据集。
+    data_dir: Path = workspace_root / "data"
     output_dir: Path = project_root / "outputs"
     model_dir: Path = output_dir / "models"
     log_dir: Path = output_dir / "logs"
