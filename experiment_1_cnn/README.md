@@ -18,6 +18,8 @@
 - 自动绘制 Loss 曲线
 - 自动绘制 Accuracy 曲线
 - 自动生成混淆矩阵
+- 自动汇总两组实验的准确率、参数量、训练效率和泛化差距
+- 卷积层特征图可视化
 - 单张图片预测
 
 ## 项目结构
@@ -30,6 +32,8 @@ experiment_1_cnn/
 │   ├── train.py
 │   ├── evaluate.py
 │   ├── predict.py
+│   ├── compare_runs.py
+│   ├── visualize_features.py
 │   ├── config.py
 │   └── utils.py
 ├── outputs/
@@ -130,7 +134,32 @@ python experiment_1_cnn/src/train.py --experiment-name kernel_3x3 --kernel-size 
 
 当前正式 `3x3` 基线实验为 `cnn_kernel_3x3_baseline_v2`。在 10 Epoch、Batch Size 32、
 Adam、学习率 0.001 和 4 个卷积块的配置下，最佳验证 Accuracy 为 93.96%，独立测试
-Accuracy 为 94.02%。详细记录见 `docs/stage_4_baseline_results.md`。
+Accuracy 为 94.02%。
+
+正式 `5x5` 对比实验为 `cnn_kernel_5x5_comparison`，除卷积核外使用完全相同的条件。
+其最佳验证 Accuracy 为 95.16%，独立测试 Accuracy 为 95.05%。测试准确率提高 1.02
+个百分点，但参数量变为 2.61 倍，平均每 Epoch 时间增加 39.94%。详细记录见
+`docs/stage_5_kernel_comparison_and_features.md`。
+
+## 汇总对比实验
+
+```bash
+python experiment_1_cnn/src/compare_runs.py cnn_kernel_3x3_baseline_v2 cnn_kernel_5x5_comparison
+```
+
+脚本会在 `outputs/comparisons/` 中生成 CSV、JSON、Markdown 和对比图。泛化差距定义为
+最佳验证准确率与独立测试准确率的绝对差。
+
+## 卷积特征图可视化
+
+```bash
+python experiment_1_cnn/src/visualize_features.py \
+  --model-path experiment_1_cnn/outputs/runs/cnn_kernel_5x5_comparison/models/best_simple_cnn.pth \
+  --sample-index 0
+```
+
+输出图包含原始图片、每个卷积层的平均激活图和最活跃通道，可用于说明 CNN 如何从
+边缘、叶脉和斑点等局部纹理逐步形成更抽象的病害特征。
 
 ## 评估模型
 
