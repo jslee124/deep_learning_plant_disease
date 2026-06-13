@@ -12,13 +12,7 @@ env/
 
 # Data and generated outputs
 data/
-**/outputs/models/*.pth
-**/outputs/models/*.pt
-**/outputs/models/*.json
-**/outputs/logs/*.csv
-**/outputs/figures/*.png
-**/outputs/reports/*.docx
-**/outputs/reports/*.pdf
+**/outputs/
 
 # IDE and system files
 .vscode/

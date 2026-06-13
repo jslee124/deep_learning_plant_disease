@@ -18,7 +18,7 @@ from utils import accuracy_from_logits, get_device, plot_confusion_matrix, prepa
 
 def parse_args():
     parser = argparse.ArgumentParser(description="评估植物病害 CNN 分类模型")
-    parser.add_argument("--model-path", type=str, default=str(config.best_model_path), help="模型权重路径")
+    parser.add_argument("--model-path", type=str, required=True, help="要评估的模型权重路径")
     parser.add_argument("--data-dir", type=str, default=None, help="数据集目录，默认使用项目 data/")
     parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"], help="评估哪个数据集")
     parser.add_argument("--batch-size", type=int, default=config.batch_size, help="Batch Size")
@@ -67,7 +67,7 @@ def main():
     prepare_output_dirs(config)
     device = get_device()
 
-    train_loader, val_loader, test_loader, class_names = build_dataloaders(config)
+    train_loader, val_loader, test_loader, class_names, _ = build_dataloaders(config)
     loader_map = {
         "train": train_loader,
         "val": val_loader,
@@ -79,11 +79,15 @@ def main():
     checkpoint_class_names = checkpoint.get("class_names", class_names)
     model_name = checkpoint.get("model_name", config.model_name)
     dropout = checkpoint.get("config", {}).get("dropout", config.dropout)
+    conv_kernel_size = checkpoint.get("config", {}).get("conv_kernel_size", 3)
+    conv_blocks = checkpoint.get("config", {}).get("conv_blocks", 4)
 
     model = build_model(
         model_name=model_name,
         num_classes=len(checkpoint_class_names),
         dropout=float(dropout),
+        conv_kernel_size=int(conv_kernel_size),
+        conv_blocks=int(conv_blocks),
     ).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
 

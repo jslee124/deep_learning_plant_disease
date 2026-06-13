@@ -118,6 +118,33 @@ def _split_dataset_indices(dataset_size: int, seed: int):
     return train_indices, val_indices, test_indices
 
 
+def _stratified_split_indices(targets: list[int], test_ratio: float, seed: int):
+    """按类别拆分索引，保证验证集和测试集中每个类别的比例接近一致。"""
+
+    if not 0 < test_ratio < 1:
+        raise ValueError("test_ratio_from_val 必须在 0 和 1 之间。")
+
+    generator = torch.Generator().manual_seed(seed)
+    val_indices = []
+    test_indices = []
+
+    for class_id in sorted(set(targets)):
+        class_indices = [index for index, target in enumerate(targets) if target == class_id]
+        shuffled = torch.randperm(len(class_indices), generator=generator).tolist()
+        test_size = max(1, min(len(class_indices) - 1, round(len(class_indices) * test_ratio)))
+        test_indices.extend(class_indices[index] for index in shuffled[:test_size])
+        val_indices.extend(class_indices[index] for index in shuffled[test_size:])
+
+    return val_indices, test_indices
+
+
+def _validate_same_classes(reference_dataset, other_dataset, split_name: str):
+    """防止不同数据目录的类别编号不一致，造成评估结果失真。"""
+
+    if reference_dataset.class_to_idx != other_dataset.class_to_idx:
+        raise ValueError(f"{split_name} 的类别目录与训练集不一致。")
+
+
 def build_dataloaders(config):
     """构建训练、验证、测试 DataLoader。
 
@@ -142,14 +169,28 @@ def build_dataloaders(config):
         if not _has_class_folders(val_dir):
             raise FileNotFoundError("已检测到 train，但缺少 val 或 valid 验证集目录。")
 
-        val_dataset = datasets.ImageFolder(val_dir, transform=eval_transform)
+        full_val_dataset = datasets.ImageFolder(val_dir, transform=eval_transform)
+        _validate_same_classes(train_dataset, full_val_dataset, "验证集")
         if _has_class_folders(test_dir):
             test_dataset = datasets.ImageFolder(test_dir, transform=eval_transform)
+            _validate_same_classes(train_dataset, test_dataset, "测试集")
+            val_dataset = full_val_dataset
+            split_strategy = "provided_train_val_test"
         else:
-            # Kaggle 这个数据集的 test/test 目录只有少量无类别标签图片，不能用于
-            # ImageFolder 测试集评估。这里暂时复用验证集，保证训练流程完整可运行。
-            print("提示：未找到带类别子文件夹的 test 目录，测试阶段将暂时使用验证集。")
-            test_dataset = val_dataset
+            # Kaggle 的 test/test 没有类别标签。将带标签的 valid 按类别稳定拆分，
+            # 既保留验证集用于选择模型，也得到训练期间不参与选择的独立测试集。
+            val_indices, test_indices = _stratified_split_indices(
+                full_val_dataset.targets,
+                test_ratio=config.test_ratio_from_val,
+                seed=config.seed,
+            )
+            val_dataset = Subset(full_val_dataset, val_indices)
+            test_dataset = Subset(full_val_dataset, test_indices)
+            split_strategy = "provided_train_stratified_valid_test"
+            print(
+                "未找到带标签的 test 目录：已按类别将 valid 拆分为"
+                f"验证集 {len(val_dataset)} 张、独立测试集 {len(test_dataset)} 张。"
+            )
 
     elif _has_class_folders(data_dir):
         base_train_dataset = datasets.ImageFolder(data_dir, transform=train_transform)
@@ -160,6 +201,7 @@ def build_dataloaders(config):
         train_dataset = Subset(base_train_dataset, train_indices)
         val_dataset = Subset(base_eval_dataset, val_indices)
         test_dataset = Subset(base_eval_dataset, test_indices)
+        split_strategy = "random_70_15_15"
 
     else:
         raise FileNotFoundError(
@@ -168,12 +210,14 @@ def build_dataloaders(config):
         )
 
     pin_memory = torch.cuda.is_available()
+    persistent_workers = config.num_workers > 0
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
         shuffle=True,
         num_workers=config.num_workers,
         pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
     )
     val_loader = DataLoader(
         val_dataset,
@@ -181,6 +225,7 @@ def build_dataloaders(config):
         shuffle=False,
         num_workers=config.num_workers,
         pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
     )
     test_loader = DataLoader(
         test_dataset,
@@ -188,6 +233,15 @@ def build_dataloaders(config):
         shuffle=False,
         num_workers=config.num_workers,
         pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
     )
 
-    return train_loader, val_loader, test_loader, class_names
+    dataset_info = {
+        "data_root": str(data_dir),
+        "split_strategy": split_strategy,
+        "train_samples": len(train_dataset),
+        "val_samples": len(val_dataset),
+        "test_samples": len(test_dataset),
+        "num_classes": len(class_names),
+    }
+    return train_loader, val_loader, test_loader, class_names, dataset_info

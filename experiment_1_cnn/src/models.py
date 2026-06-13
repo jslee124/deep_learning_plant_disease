@@ -17,41 +17,40 @@ class SimpleCNN(nn.Module):
     - 224 x 224 表示图片高和宽。
     """
 
-    def __init__(self, num_classes: int, dropout: float = 0.3):
+    def __init__(
+        self,
+        num_classes: int,
+        dropout: float = 0.3,
+        conv_kernel_size: int = 3,
+        conv_blocks: int = 4,
+    ):
         super().__init__()
 
-        self.features = nn.Sequential(
-            # 卷积层作用：
-            # 卷积核会在图片上滑动，提取局部特征，例如边缘、纹理、斑点、病斑形状等。
-            # out_channels=32 表示这一层学习 32 种不同的局部特征。
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            # ReLU 激活函数作用：
-            # 给模型加入非线性能力。如果没有激活函数，多层网络本质上仍接近线性变换，
-            # 难以学习复杂的植物病害图像特征。
-            nn.ReLU(inplace=True),
-            # 池化层作用：
-            # 降低特征图尺寸，减少计算量，同时保留主要特征。
-            # MaxPool 会保留局部区域中响应最强的特征，常用于图像分类 CNN。
-            nn.MaxPool2d(kernel_size=2, stride=2),
+        if conv_kernel_size < 1 or conv_kernel_size % 2 == 0:
+            raise ValueError("卷积核大小必须是正奇数，例如 3 或 5。")
+        channel_options = [32, 64, 128, 256]
+        if not 2 <= conv_blocks <= len(channel_options):
+            raise ValueError("conv_blocks 当前支持 2、3 或 4。")
 
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+        padding = conv_kernel_size // 2
+        feature_layers = []
+        in_channels = 3
+        for block_index, out_channels in enumerate(channel_options[:conv_blocks]):
+            # padding=k//2 让 3x3 和 5x5 卷积都保持卷积前后的高宽不变，
+            # 对比时只改变卷积核大小，不额外改变特征图尺寸。
+            feature_layers.extend(
+                [
+                    nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding),
+                    nn.BatchNorm2d(out_channels),
+                    nn.ReLU(inplace=True),
+                ]
+            )
+            if block_index < conv_blocks - 1:
+                feature_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            in_channels = out_channels
 
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            # 自适应平均池化会把任意大小的特征图压缩成 1x1。
-            # 这样全连接层输入维度固定，后续即使改 image_size，模型也更稳。
-            nn.AdaptiveAvgPool2d((1, 1)),
-        )
+        feature_layers.append(nn.AdaptiveAvgPool2d((1, 1)))
+        self.features = nn.Sequential(*feature_layers)
 
         self.classifier = nn.Sequential(
             nn.Flatten(),
@@ -59,7 +58,7 @@ class SimpleCNN(nn.Module):
             # 全连接层作用：
             # 前面的卷积层负责提取图像特征，全连接层负责把这些特征组合起来，
             # 输出每个类别的得分。例如“健康叶片”“某种病害叶片”各对应一个得分。
-            nn.Linear(256, 128),
+            nn.Linear(in_channels, 128),
             nn.ReLU(inplace=True),
             nn.Dropout(p=dropout),
             nn.Linear(128, num_classes),
@@ -73,7 +72,13 @@ class SimpleCNN(nn.Module):
         return x
 
 
-def build_model(model_name: str = "simple_cnn", num_classes: int = 2, dropout: float = 0.3) -> nn.Module:
+def build_model(
+    model_name: str = "simple_cnn",
+    num_classes: int = 2,
+    dropout: float = 0.3,
+    conv_kernel_size: int = 3,
+    conv_blocks: int = 4,
+) -> nn.Module:
     """根据模型名称创建模型。
 
     参数:
@@ -84,6 +89,11 @@ def build_model(model_name: str = "simple_cnn", num_classes: int = 2, dropout: f
 
     name = model_name.lower()
     if name in {"simple_cnn", "cnn", "baseline_cnn"}:
-        return SimpleCNN(num_classes=num_classes, dropout=dropout)
+        return SimpleCNN(
+            num_classes=num_classes,
+            dropout=dropout,
+            conv_kernel_size=conv_kernel_size,
+            conv_blocks=conv_blocks,
+        )
 
     raise ValueError(f"暂不支持模型: {model_name}。第二阶段请使用 simple_cnn。")

@@ -5,8 +5,11 @@
 """
 
 import json
+import platform
 import random
+import csv
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 
 import matplotlib
@@ -118,6 +121,49 @@ def config_to_dict(config) -> dict:
 
     data = asdict(config)
     return {key: str(value) if isinstance(value, Path) else value for key, value in data.items()}
+
+
+def get_hardware_info(device: torch.device) -> dict:
+    """收集实验报告需要的软件和硬件环境信息。"""
+
+    gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "Not available"
+    return {
+        "operating_system": platform.platform(),
+        "cpu": platform.processor() or platform.machine(),
+        "gpu": gpu_name,
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_version": torch.version.cuda or "Not available",
+        "pytorch_version": torch.__version__,
+        "training_device": str(device),
+    }
+
+
+def save_json(data: dict, path: str | Path):
+    """以 UTF-8 JSON 保存一次实验的完整信息。"""
+
+    path = Path(path)
+    ensure_dir(path.parent)
+    with path.open("w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
+
+
+def append_csv_row(path: str | Path, row: dict):
+    """向汇总 CSV 追加一行；首次写入时自动创建表头。"""
+
+    path = Path(path)
+    ensure_dir(path.parent)
+    file_exists = path.exists() and path.stat().st_size > 0
+    with path.open("a", newline="", encoding="utf-8-sig") as file:
+        writer = csv.DictWriter(file, fieldnames=list(row.keys()))
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+def current_time_text() -> str:
+    """返回便于写入日志的本地时间。"""
+
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def plot_training_curves(history: dict, figure_dir: str | Path):

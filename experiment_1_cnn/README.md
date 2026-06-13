@@ -10,8 +10,11 @@
 - 自建 CNN 模型
 - 训练循环
 - 验证循环
-- 测试循环
+- 独立测试集评估
 - 保存验证集表现最好的模型
+- 通过实验名称隔离每次训练输出
+- 自动记录实验参数、数据划分、硬件信息和训练效率
+- 可配置 `3x3`/`5x5` 卷积核及 2/3/4 个卷积块
 - 自动绘制 Loss 曲线
 - 自动绘制 Accuracy 曲线
 - 自动生成混淆矩阵
@@ -70,7 +73,8 @@ data/
 本项目已经适配 Kaggle 的 `vipoooool/new-plant-diseases-dataset`。该数据集解压后
 训练集和验证集通常位于较深目录中，并且验证集目录名是 `valid`，程序会自动识别。
 该数据集自带的 `test/test` 是少量无类别标签图片，不适合直接做 ImageFolder 测试集；
-当前代码会在没有标准 `test/类别名/图片` 结构时暂时使用验证集完成测试流程。
+程序会按类别、固定随机种子将 `valid` 平分为验证集和独立测试集，不再复用同一批
+图片。当前数据共 38 类，`valid` 共 17572 张图片，默认约一半用于验证、一半用于测试。
 
 ## 安装依赖
 
@@ -85,13 +89,13 @@ pip install -r requirements.txt
 在仓库根目录 `deep_learning_plant_disease/` 下运行：
 
 ```bash
-python experiment_1_cnn/src/train.py
+python experiment_1_cnn/src/train.py --experiment-name baseline_k3
 ```
 
 也可以覆盖默认参数：
 
 ```bash
-python experiment_1_cnn/src/train.py --epochs 20 --batch-size 32 --lr 0.001 --optimizer Adam
+python experiment_1_cnn/src/train.py --experiment-name baseline_k3 --epochs 10 --kernel-size 3
 ```
 
 关闭数据增强：
@@ -100,21 +104,38 @@ python experiment_1_cnn/src/train.py --epochs 20 --batch-size 32 --lr 0.001 --op
 python experiment_1_cnn/src/train.py --no-augmentation
 ```
 
-训练完成后会生成：
+每次训练保存在独立目录，不会覆盖其他实验：
 
 ```text
-experiment_1_cnn/outputs/models/best_simple_cnn.pth
-experiment_1_cnn/outputs/models/class_names.json
-experiment_1_cnn/outputs/figures/loss_curve.png
-experiment_1_cnn/outputs/figures/accuracy_curve.png
-experiment_1_cnn/outputs/figures/confusion_matrix.png
-experiment_1_cnn/outputs/logs/training_history.csv
+experiment_1_cnn/outputs/runs/baseline_k3/models/best_simple_cnn.pth
+experiment_1_cnn/outputs/runs/baseline_k3/figures/
+experiment_1_cnn/outputs/runs/baseline_k3/logs/
+experiment_1_cnn/outputs/logs/experiment_results.csv
+experiment_1_cnn/outputs/logs/hardware_benchmark.csv
 ```
+
+卷积核单变量对比应保持其他参数一致：
+
+```bash
+python experiment_1_cnn/src/train.py --experiment-name kernel_3x3 --kernel-size 3
+python experiment_1_cnn/src/train.py --experiment-name kernel_5x5 --kernel-size 5
+```
+
+如果 GPU 利用率较低，可以为两组对比实验统一增加 `--num-workers 4`。训练每个 Epoch
+都会保存 `latest_checkpoint.pth` 和训练历史；若训练意外中断，可使用原实验名继续：
+
+```bash
+python experiment_1_cnn/src/train.py --experiment-name kernel_3x3 --kernel-size 3 --num-workers 4 --resume
+```
+
+当前正式 `3x3` 基线实验为 `cnn_kernel_3x3_baseline_v2`。在 10 Epoch、Batch Size 32、
+Adam、学习率 0.001 和 4 个卷积块的配置下，最佳验证 Accuracy 为 93.96%，独立测试
+Accuracy 为 94.02%。详细记录见 `docs/stage_4_baseline_results.md`。
 
 ## 评估模型
 
 ```bash
-python experiment_1_cnn/src/evaluate.py --split test
+python experiment_1_cnn/src/evaluate.py --model-path experiment_1_cnn/outputs/runs/baseline_k3/models/best_simple_cnn.pth --split test
 ```
 
 可选 `--split train`、`--split val`、`--split test`。
@@ -122,13 +143,13 @@ python experiment_1_cnn/src/evaluate.py --split test
 ## 单张图片预测
 
 ```bash
-python experiment_1_cnn/src/predict.py --image-path path/to/leaf.jpg
+python experiment_1_cnn/src/predict.py --model-path experiment_1_cnn/outputs/runs/baseline_k3/models/best_simple_cnn.pth --image-path path/to/leaf.jpg
 ```
 
 显示置信度最高的前 3 个类别：
 
 ```bash
-python experiment_1_cnn/src/predict.py --image-path path/to/leaf.jpg --top-k 3
+python experiment_1_cnn/src/predict.py --model-path experiment_1_cnn/outputs/runs/baseline_k3/models/best_simple_cnn.pth --image-path path/to/leaf.jpg --top-k 3
 ```
 
 ## 课堂讲解要点

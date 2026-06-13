@@ -19,7 +19,7 @@ from utils import get_device
 def parse_args():
     parser = argparse.ArgumentParser(description="使用训练好的 CNN 模型预测单张图片")
     parser.add_argument("--image-path", type=str, required=True, help="待预测图片路径")
-    parser.add_argument("--model-path", type=str, default=str(config.best_model_path), help="模型权重路径")
+    parser.add_argument("--model-path", type=str, required=True, help="用于预测的模型权重路径")
     parser.add_argument("--image-size", type=int, default=config.image_size, help="输入图片尺寸")
     parser.add_argument("--top-k", type=int, default=3, help="显示置信度最高的前 K 个类别")
     return parser.parse_args()
@@ -32,11 +32,15 @@ def load_model(model_path: str | Path, device: torch.device):
     class_names = checkpoint["class_names"]
     model_name = checkpoint.get("model_name", config.model_name)
     dropout = checkpoint.get("config", {}).get("dropout", config.dropout)
+    conv_kernel_size = checkpoint.get("config", {}).get("conv_kernel_size", 3)
+    conv_blocks = checkpoint.get("config", {}).get("conv_blocks", 4)
 
     model = build_model(
         model_name=model_name,
         num_classes=len(class_names),
         dropout=float(dropout),
+        conv_kernel_size=int(conv_kernel_size),
+        conv_blocks=int(conv_blocks),
     ).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
