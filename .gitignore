@@ -13,6 +13,9 @@ env/
 # Data and generated outputs
 data/
 **/outputs/
+reports/.qa*/
+reports/experiment_report/deep_learning_experiment_report.docx
+~$*.docx
 
 # IDE and system files
 .vscode/
