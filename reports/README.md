@@ -11,12 +11,12 @@ reports/
 学校统一封面、姓名、学号、班级和教师信息待模板下发后添加。源代码提交包不包含数据、
 模型和输出，以控制体积。
 
-最终正文文件：
+最终报告文件：
 
-- `experiment_report/deep_learning_experiment_report_body.docx`
-- `experiment_report/deep_learning_experiment_report_body.pdf`
-- `course_design_report/course_design_report_body.docx`
-- `course_design_report/course_design_report_body.pdf`
+- `experiment_report/深度学习实验报告.docx`
+- `experiment_report/深度学习实验报告.pdf`
+- `experiment_report/深度学习实验报告.md`
+- `course_design_report/深度学习课程设计报告.docx`
 
 重新生成 Word：
 

@@ -4,9 +4,8 @@ import re
 from pathlib import Path
 
 from docx import Document
-from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt, RGBColor
@@ -15,21 +14,21 @@ from docx.shared import Cm, Inches, Pt, RGBColor
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS = [
     (
-        ROOT / "reports" / "experiment_report" / "deep_learning_experiment_report.md",
-        ROOT / "reports" / "experiment_report" / "deep_learning_experiment_report_body.docx",
-        "深度学习实验报告（正文）",
+        ROOT / "reports" / "experiment_report" / "深度学习实验报告.md",
+        ROOT / "reports" / "experiment_report" / "深度学习实验报告.docx",
+        "深度学习实验报告",
+        False,
     ),
     (
-        ROOT / "reports" / "course_design_report" / "course_design_report_draft.md",
-        ROOT / "reports" / "course_design_report" / "course_design_report_body.docx",
-        "深度学习课程设计（正文）",
+        ROOT / "reports" / "course_design_report" / "深度学习课程设计报告.md",
+        ROOT / "reports" / "course_design_report" / "深度学习课程设计报告.docx",
+        "深度学习课程设计报告",
+        True,
     ),
 ]
 
 CONTENT_WIDTH_DXA = 9026
-ACCENT = "2E5D62"
 LIGHT_FILL = "EEF4F3"
-MUTED = "5B6570"
 
 
 def set_run_font(run, east_asia="宋体", latin="Times New Roman", size=10.5, bold=None, color=None):
@@ -123,10 +122,10 @@ def add_page_number(paragraph):
     end = OxmlElement("w:fldChar")
     end.set(qn("w:fldCharType"), "end")
     run._r.extend([begin, instruction, separate, text, end])
-    set_run_font(run, size=9, color=MUTED)
+    set_run_font(run, size=9)
 
 
-def configure_document(doc, running_title):
+def configure_document(doc, running_title, add_header=True):
     section = doc.sections[0]
     section.page_width = Cm(21)
     section.page_height = Cm(29.7)
@@ -158,15 +157,16 @@ def configure_document(doc, running_title):
         style._element.rPr.rFonts.set(qn("w:eastAsia"), "黑体")
         style.font.size = Pt(size)
         style.font.bold = True
-        style.font.color.rgb = RGBColor.from_string(ACCENT)
+        style.font.color.rgb = RGBColor(0, 0, 0)
         style.paragraph_format.space_before = Pt(before)
         style.paragraph_format.space_after = Pt(after)
         style.paragraph_format.keep_with_next = True
 
-    header = section.header.paragraphs[0]
-    header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    header_run = header.add_run(running_title)
-    set_run_font(header_run, east_asia="黑体", latin="Arial", size=9, color=MUTED)
+    if add_header:
+        header = section.header.paragraphs[0]
+        header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        header_run = header.add_run(running_title)
+        set_run_font(header_run, east_asia="黑体", latin="Arial", size=9)
 
     add_page_number(section.footer.paragraphs[0])
 
@@ -181,7 +181,7 @@ def add_inline_runs(paragraph, text, default_size=10.5):
             set_run_font(run, size=default_size, bold=True)
         elif token.startswith("`") and token.endswith("`"):
             run = paragraph.add_run(token[1:-1])
-            set_run_font(run, east_asia="等线", latin="Consolas", size=default_size - 0.5, color="1F4D78")
+            set_run_font(run, east_asia="等线", latin="Consolas", size=default_size - 0.5)
         else:
             run = paragraph.add_run(token)
             set_run_font(run, size=default_size)
@@ -193,7 +193,7 @@ def add_title(doc, text):
     paragraph.paragraph_format.space_before = Pt(24)
     paragraph.paragraph_format.space_after = Pt(18)
     run = paragraph.add_run(text)
-    set_run_font(run, east_asia="黑体", latin="Arial", size=22, bold=True, color=ACCENT)
+    set_run_font(run, east_asia="黑体", latin="Arial", size=22, bold=True)
 
 
 def add_note(doc, text):
@@ -207,7 +207,7 @@ def add_note(doc, text):
     shd.set(qn("w:fill"), LIGHT_FILL)
     p_pr.append(shd)
     run = paragraph.add_run(text)
-    set_run_font(run, size=9.5, color=MUTED)
+    set_run_font(run, size=9.5)
 
 
 def parse_table(lines):
@@ -274,11 +274,11 @@ def add_image(doc, source_md, alt_text, relative_path):
     doc.core_properties.comments = f"包含图片：{alt_text}"
 
 
-def build_report(source_md, output_docx, running_title):
+def build_report(source_md, output_docx, running_title, add_header=True):
     text = source_md.read_text(encoding="utf-8")
     lines = text.splitlines()
     doc = Document()
-    configure_document(doc, running_title)
+    configure_document(doc, running_title, add_header)
 
     index = 0
     title_used = False
@@ -372,8 +372,8 @@ def build_report(source_md, output_docx, running_title):
 
 
 def main():
-    for source_md, output_docx, running_title in REPORTS:
-        build_report(source_md, output_docx, running_title)
+    for source_md, output_docx, running_title, add_header in REPORTS:
+        build_report(source_md, output_docx, running_title, add_header)
 
 
 if __name__ == "__main__":
