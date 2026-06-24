@@ -1,4 +1,4 @@
-# 03 图像预处理与数据增强
+﻿# 03 图像预处理与数据增强
 
 ## 1. 为什么图片不能直接送进模型
 
@@ -19,6 +19,17 @@
 ```
 
 一个 batch 送进模型时形状是：
+对应文件：`experiment_1_cnn/src/dataset.py`
+
+对应代码片段：图片经过 transform 后由 `DataLoader` 组成 batch。
+
+```python
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=config.batch_size,
+    shuffle=True,
+)
+```
 
 ```text
 [B, 3, 224, 224]
@@ -119,6 +130,17 @@ transforms.Normalize(...)
 ```
 
 没有随机裁剪、随机翻转、随机旋转、颜色扰动。
+对应文件：`experiment_1_cnn/src/dataset.py`
+
+对应代码片段：验证和测试使用 `get_eval_transform()`，只保留确定性处理。
+
+```python
+return transforms.Compose([
+    transforms.Resize((image_size, image_size)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+```
 
 ## 5. 为什么验证和测试不做随机增强
 
@@ -174,3 +196,5 @@ transforms.Normalize(...)
 答：
 
 > Normalize 让输入分布更稳定，使模型训练更容易收敛。
+
+

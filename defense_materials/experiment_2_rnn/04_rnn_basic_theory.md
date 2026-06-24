@@ -1,4 +1,4 @@
-# 04 RNN 基础知识
+﻿# 04 RNN 基础知识
 
 ## 1. RNN 是什么
 
@@ -10,6 +10,19 @@ RNN 全称 Recurrent Neural Network，中文是循环神经网络。
 - 语音。
 - 时间序列。
 - 按行展开后的图片。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：本项目用 `nn.RNN` 处理按行展开后的 MNIST 序列。
+
+```python
+self.rnn = nn.RNN(
+    input_size=input_size,
+    hidden_size=hidden_size,
+    num_layers=num_layers,
+    batch_first=True,
+    nonlinearity="tanh",
+)
+```
 
 RNN 的特点是：
 
@@ -37,6 +50,14 @@ x_t: [B, 28]
 ```
 
 其中 `t` 表示第几个时间步。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：`input_size=28` 表示每个时间步输入一行 28 个像素。
+
+```python
+def __init__(self, input_size: int = 28, hidden_size: int = 64, ...):
+    self.rnn = nn.RNN(input_size=input_size, hidden_size=hidden_size, batch_first=True)
+```
 
 ## 4. 隐藏状态是什么
 
@@ -93,6 +114,14 @@ hidden_size = 128
 - 能保存的信息更多。
 - 参数量也更多。
 - 计算成本可能更高。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：`hidden_size` 同时影响 RNN 层和最后的线性分类层。
+
+```python
+self.rnn = nn.RNN(input_size=input_size, hidden_size=hidden_size, batch_first=True)
+self.classifier = nn.Linear(hidden_size, num_classes)
+```
 
 ## 7. RNN 输出是什么
 
@@ -111,6 +140,15 @@ outputs, hidden = self.rnn(sequence)
 `hidden` 是最后的隐藏状态。
 
 本项目使用 `outputs[:, -1, :]` 取最后时间步。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：项目中取最后一个时间步，再送入分类层。
+
+```python
+outputs, _ = self.rnn(sequence)
+final_output = outputs[:, -1, :]
+return self.classifier(final_output)
+```
 
 ## 8. 为什么用最后一个时间步分类
 
@@ -143,3 +181,7 @@ LSTM 增加门控机制。
 - 哪些信息应该输出。
 
 因此 LSTM 更适合长序列和长期依赖。
+
+
+
+

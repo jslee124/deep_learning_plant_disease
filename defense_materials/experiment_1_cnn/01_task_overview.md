@@ -1,8 +1,18 @@
-# 01 项目任务与整体流程
+﻿# 01 项目任务与整体流程
 
 ## 1. 这个实验到底做什么
 
 这个实验使用 CNN 对植物叶片图片进行分类。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：`SimpleCNN.forward()` 把输入图片变成类别 logits。
+
+```python
+def forward(self, x: torch.Tensor) -> torch.Tensor:
+    x = self.features(x)
+    x = self.classifier(x)
+    return x
+```
 
 输入是一张叶片图片，输出是它属于哪一种类别，例如：
 
@@ -49,6 +59,15 @@ Adam 优化器更新模型参数
 保存验证集准确率最高的模型
   ↓
 用独立测试集做最终评价
+对应文件：`experiment_1_cnn/src/train.py`
+
+对应代码片段：训练结束后加载验证集最佳模型，再在测试集上评估。
+
+```python
+checkpoint = torch.load(config.best_model_path, map_location=device)
+model.load_state_dict(checkpoint["model_state_dict"])
+test_loss, test_acc, y_true, y_pred = evaluate_one_epoch(model, test_loader, criterion, device, desc="Test")
+```
   ↓
 保存曲线、混淆矩阵、实验日志和对比图
 ```
@@ -124,3 +143,5 @@ experiment_1_cnn/src/compare_runs.py
 - 模型是自建 CNN。
 - 主要对比变量是卷积核大小：`3x3` 和 `5x5`。
 - 实验不是只看准确率，还看参数量、训练时间、吞吐量和泛化差距。
+
+

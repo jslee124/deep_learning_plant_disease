@@ -1,4 +1,4 @@
-# 09 高频追问与自测题
+﻿# 09 高频追问与自测题
 
 ## 1. 高频追问
 
@@ -71,7 +71,20 @@
 4. `B` 是 batch size，`3` 是 RGB 通道，`224x224` 是高宽。
 5. `ToTensor` 把图片转张量，`Normalize` 标准化通道分布。
 6. 卷积提特征，BN 稳定训练，ReLU 加非线性，池化降尺寸。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：这四个结构就在卷积块中连续出现。
+
+```python
+feature_layers.extend([
+    nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding),
+    nn.BatchNorm2d(out_channels),
+    nn.ReLU(inplace=True),
+])
+feature_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+```
 7. `5x5` 有 25 个权重位置，`3x3` 有 9 个。
 8. 保持卷积前后高宽不变，使对比更公平。
 9. 把每个通道压成 `1x1`，减少全连接输入维度。
 10. CrossEntropyLoss 需要 logits；展示预测概率时再 softmax。
+

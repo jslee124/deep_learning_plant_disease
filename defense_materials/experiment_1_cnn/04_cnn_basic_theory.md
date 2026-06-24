@@ -1,4 +1,4 @@
-# 04 CNN 基础知识
+﻿# 04 CNN 基础知识
 
 ## 1. CNN 为什么适合图片
 
@@ -11,6 +11,13 @@
 - 叶脉由连续线状结构形成。
 
 CNN 的卷积层正是用小窗口扫描图片，学习这些局部特征。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：卷积层在 `SimpleCNN.__init__()` 中创建，`kernel_size` 决定小窗口大小。
+
+```python
+nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding)
+```
 
 ## 2. 卷积层做什么
 
@@ -44,6 +51,20 @@ R, G, B
 ```
 
 可以理解为模型提取出了 32 种不同的低级特征图。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：第一层输入通道是 3，输出通道来自 `channel_options` 的第一个值 32。
+
+```python
+channel_options = [32, 64, 128, 256]
+in_channels = 3
+for block_index, out_channels in enumerate(channel_options[:conv_blocks]):
+    feature_layers.extend([
+        nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding),
+        nn.BatchNorm2d(out_channels),
+        nn.ReLU(inplace=True),
+    ])
+```
 
 ## 4. 卷积核大小
 
@@ -65,6 +86,18 @@ R, G, B
 ```
 
 如果同样输入输出通道，`5x5` 的卷积核面积是 25，`3x3` 是 9，所以 `5x5` 参数更多。
+对应文件：`experiment_1_cnn/src/train.py`、`experiment_1_cnn/src/models.py`
+
+对应代码片段：命令行参数控制卷积核大小，模型构建时传给 `Conv2d`。
+
+```python
+parser.add_argument("--kernel-size", type=int, default=config.conv_kernel_size, help="卷积核大小，如 3 或 5")
+
+model = build_model(
+    conv_kernel_size=config.conv_kernel_size,
+    conv_blocks=config.conv_blocks,
+)
+```
 
 ## 5. 感受野是什么
 
@@ -96,6 +129,14 @@ padding = conv_kernel_size // 2
 可以保持卷积前后高宽不变。
 
 这对对比实验很重要，因为你想主要比较卷积核大小，而不是让特征图尺寸也跟着变化。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：`padding = conv_kernel_size // 2` 会让 `3x3` 得到 padding 1，`5x5` 得到 padding 2。
+
+```python
+padding = conv_kernel_size // 2
+nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding)
+```
 
 ## 7. ReLU 做什么
 
@@ -110,6 +151,17 @@ ReLU(x) = max(0, x)
 作用是引入非线性。
 
 没有非线性，多层神经网络即使叠很多层，本质上也很难表达复杂关系。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：每个卷积块中 `Conv2d` 后面接 `BatchNorm2d` 和 `ReLU`。
+
+```python
+feature_layers.extend([
+    nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding),
+    nn.BatchNorm2d(out_channels),
+    nn.ReLU(inplace=True),
+])
+```
 
 ## 8. 池化层做什么
 
@@ -132,6 +184,14 @@ nn.MaxPool2d(kernel_size=2, stride=2)
 - 降低计算量。
 - 扩大后续层感受野。
 - 保留局部最显著特征。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：除了最后一个卷积块，前面的卷积块后面都会添加最大池化。
+
+```python
+if block_index < conv_blocks - 1:
+    feature_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+```
 
 ## 9. BatchNorm 做什么
 
@@ -144,6 +204,15 @@ BatchNorm 会对中间特征进行归一化，让每层输入分布更稳定。
 - 对学习率不那么敏感。
 
 答辩时不用讲公式，知道作用即可。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：BatchNorm 放在卷积层之后、ReLU 之前。
+
+```python
+nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding),
+nn.BatchNorm2d(out_channels),
+nn.ReLU(inplace=True),
+```
 
 ## 10. Dropout 做什么
 
@@ -155,6 +224,16 @@ Dropout 在训练时随机让一部分神经元输出为 0。
 
 - 训练时 Dropout 开启。
 - 验证和测试时 Dropout 关闭。
+对应文件：`experiment_1_cnn/src/models.py`、`experiment_1_cnn/src/train.py`
+
+对应代码片段：Dropout 定义在分类器中；训练时 `model.train()` 开启，验证/测试时 `model.eval()` 关闭。
+
+```python
+nn.Dropout(p=dropout)
+
+model.train()
+model.eval()
+```
 
 ## 11. 全连接层做什么
 
@@ -169,3 +248,26 @@ Dropout 在训练时随机让一部分神经元输出为 0。
 ```
 
 表示每张图片对应 38 个类别得分。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：最后的全连接层输出 `num_classes` 个类别得分，也就是 logits。
+
+```python
+self.classifier = nn.Sequential(
+    nn.Flatten(),
+    nn.Dropout(p=dropout),
+    nn.Linear(in_channels, 128),
+    nn.ReLU(inplace=True),
+    nn.Dropout(p=dropout),
+    nn.Linear(128, num_classes),
+)
+```
+
+
+
+
+
+
+
+
+

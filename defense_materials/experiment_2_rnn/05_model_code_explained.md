@@ -1,4 +1,4 @@
-# 05 MnistRNN 模型代码详解
+﻿# 05 MnistRNN 模型代码详解
 
 ## 1. 模型代码位置
 
@@ -7,6 +7,14 @@ experiment_2_rnn/src/models.py
 ```
 
 核心类：
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：模型类就是 `MnistRNN`。
+
+```python
+class MnistRNN(nn.Module):
+    """把 28x28 图片按行看作长度为 28 的序列。"""
+```
 
 ```python
 class MnistRNN(nn.Module)
@@ -107,6 +115,14 @@ self.classifier = nn.Linear(hidden_size, num_classes)
 ```
 
 也就是把最后时间步的隐藏表示映射为 10 个数字类别得分。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：最后一步由线性层输出 10 个类别得分。
+
+```python
+self.classifier = nn.Linear(hidden_size, num_classes)
+return self.classifier(final_output)
+```
 
 ## 5. forward 函数
 
@@ -183,3 +199,5 @@ self.classifier(final_output)
 ## 7. 你要能现场讲的一段话
 
 > 我的 RNN 模型先把 MNIST 输入从 `[B, 1, 28, 28]` 转成 `[B, 28, 28]`，其中 28 个时间步对应 28 行，每个时间步输入 28 个像素。RNN 输出所有时间步的隐藏表示，我取最后一个时间步作为整张图片的表示，再通过线性层输出 10 个数字类别的 logits。
+
+

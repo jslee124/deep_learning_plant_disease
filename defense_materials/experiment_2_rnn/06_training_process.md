@@ -1,4 +1,4 @@
-# 06 训练流程与梯度裁剪
+﻿# 06 训练流程与梯度裁剪
 
 ## 1. 训练代码位置
 
@@ -44,6 +44,14 @@ run_epoch(...)
 ```
 
 如果传入 `optimizer`，就是训练。
+对应文件：`experiment_2_rnn/src/train.py`
+
+对应代码片段：`optimizer is not None` 时进入训练模式，否则用于验证或测试。
+
+```python
+training = optimizer is not None
+model.train(training)
+```
 
 如果不传入 `optimizer`，就是验证或测试。
 
@@ -99,6 +107,15 @@ clip_grad_norm_(..., max_norm=5.0)
 ```
 
 限制梯度范数，防止梯度爆炸。
+对应文件：`experiment_2_rnn/src/train.py`
+
+对应代码片段：反向传播后、参数更新前执行梯度裁剪。
+
+```python
+loss.backward()
+torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+optimizer.step()
+```
 
 ### 更新参数
 
@@ -167,3 +184,5 @@ figures/prediction_examples.png
 - 使用 Adam 优化器。
 - 使用梯度裁剪防止梯度爆炸。
 - 使用验证集保存最佳模型。
+
+

@@ -1,4 +1,4 @@
-# 02 MNIST 数据集与固定划分
+﻿# 02 MNIST 数据集与固定划分
 
 ## 1. MNIST 是什么
 
@@ -82,6 +82,16 @@ std = 0.3081
 ```
 
 因为 MNIST 是灰度图，只有一个通道，所以均值和标准差都只有一个数。
+对应文件：`experiment_2_rnn/src/dataset.py`
+
+对应代码片段：MNIST 的预处理只包含灰度图的单通道均值和标准差。
+
+```python
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.1307,), (0.3081,)),
+])
+```
 
 ## 5. 数据划分
 
@@ -159,3 +169,17 @@ seed = 42
 答：
 
 > 固定随机种子可以保证两组对比实验使用相同划分，使比较更公平。
+对应文件：`experiment_2_rnn/src/dataset.py`
+
+对应代码片段：`random_split` 使用固定 seed 的 generator。
+
+```python
+generator = torch.Generator().manual_seed(config.seed)
+train_dataset, val_dataset = random_split(
+    full_train,
+    [train_size, config.validation_size],
+    generator=generator,
+)
+```
+
+

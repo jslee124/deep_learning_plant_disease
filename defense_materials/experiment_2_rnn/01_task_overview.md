@@ -1,8 +1,18 @@
-# 01 项目任务与整体流程
+﻿# 01 项目任务与整体流程
 
 ## 1. 这个实验到底做什么
 
 这个实验用基础 RNN 对 MNIST 手写数字图片进行分类。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：`MnistRNN` 先把图片变序列，再用 RNN 和线性层输出 10 类 logits。
+
+```python
+sequence = images.squeeze(1)
+outputs, _ = self.rnn(sequence)
+final_output = outputs[:, -1, :]
+return self.classifier(final_output)
+```
 
 输入是一张手写数字图片。
 
@@ -107,3 +117,4 @@ experiment_2_rnn/src/utils.py
 - 序列长度是 28。
 - 每个时间步输入 28 个像素。
 - 输出是 10 个数字类别得分。
+

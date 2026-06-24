@@ -1,4 +1,4 @@
-# 07 卷积核对比实验结果分析
+﻿# 07 卷积核对比实验结果分析
 
 ## 1. 本章核心问题
 
@@ -40,6 +40,14 @@
 这叫控制变量实验。
 
 答辩时一定要强调“只改变一个变量”。
+对应文件：`experiment_1_cnn/src/train.py`
+
+对应代码片段：正式对比时只通过 `--kernel-size` 改变卷积核，其它参数来自同一套配置。
+
+```python
+parser.add_argument("--kernel-size", type=int, default=config.conv_kernel_size, help="卷积核大小，如 3 或 5")
+config.conv_kernel_size = args.kernel_size
+```
 
 ## 3. 结果表
 
@@ -90,6 +98,13 @@
 ```
 
 `5x5` 是 `3x3` 的约 2.61 倍。
+对应文件：`experiment_1_cnn/src/train.py`
+
+对应代码片段：参数量由所有模型参数的元素数量累加得到。
+
+```python
+parameter_count = sum(parameter.numel() for parameter in model.parameters())
+```
 
 原因是卷积参数量和卷积核面积成正比：
 
@@ -160,3 +175,5 @@
 回答：
 
 > 更严谨的实验应该使用多个随机种子重复训练，并报告均值和标准差。本实验作为课程实验，重点展示控制变量、训练流程和结果分析，因此完成了一组固定随机种子下的对比。
+
+

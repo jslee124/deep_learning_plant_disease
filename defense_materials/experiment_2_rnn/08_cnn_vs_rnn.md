@@ -1,4 +1,4 @@
-# 08 CNN 与 RNN 对比
+﻿# 08 CNN 与 RNN 对比
 
 ## 1. 为什么要单独比较
 
@@ -23,6 +23,13 @@
 ## 3. CNN 怎么看图片
 
 CNN 直接在二维图片上滑动卷积核。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：CNN 的二维卷积使用 `nn.Conv2d`。
+
+```python
+nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding)
+```
 
 例如 `3x3` 卷积核一次看一个局部小块。
 
@@ -46,6 +53,15 @@ RNN 不直接看二维小块。
 ```
 
 RNN 通过隐藏状态把前面行的信息传到后面。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：RNN 读入 `[B, 28, 28]` 序列，并取最后时间步分类。
+
+```python
+sequence = images.squeeze(1)
+outputs, _ = self.rnn(sequence)
+final_output = outputs[:, -1, :]
+```
 
 它更强调顺序关系。
 
@@ -85,3 +101,5 @@ RNN 通过隐藏状态把前面行的信息传到后面。
 你可以这样总结：
 
 > 实验一体现了 CNN 在图像空间特征提取上的优势，重点关注卷积核大小对植物病害分类的影响。实验二体现了 RNN 对序列数据的建模方式，把 MNIST 按行转换成序列，重点观察隐藏状态维度对分类效果的影响。两个实验分别对应深度学习中图像建模和序列建模的基本思想。
+
+

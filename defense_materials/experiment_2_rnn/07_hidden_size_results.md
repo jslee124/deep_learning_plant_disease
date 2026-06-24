@@ -1,4 +1,4 @@
-# 07 隐藏维度对比实验结果分析
+﻿# 07 隐藏维度对比实验结果分析
 
 ## 1. 本章核心问题
 
@@ -89,6 +89,14 @@ hidden=128: 21,514
 ```
 
 隐藏维度增加后，RNN 内部输入到隐藏、隐藏到隐藏、隐藏到分类层的参数都会增加。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：`hidden_size` 同时出现在 RNN 层和分类层里。
+
+```python
+self.rnn = nn.RNN(input_size=input_size, hidden_size=hidden_size, batch_first=True)
+self.classifier = nn.Linear(hidden_size, num_classes)
+```
 
 所以准确率提升的同时，模型复杂度也增加。
 
@@ -160,3 +168,4 @@ hidden=128: 21,514
 ## 9. 正确结论怎么说
 
 > 在本实验中，隐藏维度从 64 增加到 128 后，测试准确率从 94.34% 提升到 97.07%，测试 Loss 也降低，说明更大的隐藏状态能保存更多笔画和行间结构信息。但参数量从 6,666 增加到 21,514，因此提升准确率的同时也增加了模型复杂度。
+

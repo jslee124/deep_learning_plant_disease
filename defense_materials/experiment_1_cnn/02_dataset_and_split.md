@@ -1,4 +1,4 @@
-# 02 数据集、ImageFolder 与数据划分
+﻿# 02 数据集、ImageFolder 与数据划分
 
 ## 1. 为什么先讲数据
 
@@ -46,6 +46,14 @@ Apple___healthy -> 1
 ```
 
 模型训练时不直接使用文字类别，而是使用数字标签。
+对应文件：`experiment_1_cnn/src/dataset.py`
+
+对应代码片段：`ImageFolder` 会读取类别文件夹，并通过 `classes` 保存类别名顺序。
+
+```python
+train_dataset = datasets.ImageFolder(train_dir, transform=train_transform)
+class_names = train_dataset.classes
+```
 
 ## 3. 训练集、验证集、测试集分别干什么
 
@@ -120,6 +128,16 @@ build_dataloaders()
 假设某类图片本来就少，如果随机拆分，可能验证集里有这个类，但测试集里没有，或者反过来。
 
 按类别拆分能让验证集和测试集的类别分布更接近。
+对应文件：`experiment_1_cnn/src/dataset.py`
+
+对应代码片段：`_stratified_split_indices()` 会逐个类别拆分索引。
+
+```python
+for class_id in sorted(set(targets)):
+    class_indices = [index for index, target in enumerate(targets) if target == class_id]
+    shuffled = torch.randperm(len(class_indices), generator=generator).tolist()
+    test_size = max(1, min(len(class_indices) - 1, round(len(class_indices) * test_ratio)))
+```
 
 ## 7. 本实验正式数据规模
 
@@ -184,3 +202,5 @@ shuffle=False
 答：
 
 > 为了让验证集和测试集中每个类别比例接近，避免某些类别分布不均导致评价不稳定。
+
+

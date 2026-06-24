@@ -1,4 +1,4 @@
-# 03 图片如何转换成序列
+﻿# 03 图片如何转换成序列
 
 ## 1. 本章是实验二最关键的理解点
 
@@ -11,6 +11,15 @@ MNIST 是图片。
 > 为什么图片能送进 RNN？
 
 答案是：把图片按行看成序列。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：`forward()` 里先用 `squeeze(1)` 去掉灰度通道，把图片变成行序列。
+
+```python
+def forward(self, images: torch.Tensor) -> torch.Tensor:
+    sequence = images.squeeze(1)
+    outputs, _ = self.rnn(sequence)
+```
 
 ## 2. 原始图片形状
 
@@ -41,6 +50,13 @@ sequence = images.squeeze(1)
 ```
 
 因为 MNIST 只有 1 个灰度通道，去掉这个维度不会丢失信息。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：输入 `[B, 1, 28, 28]` 经过这行变成 `[B, 28, 28]`。
+
+```python
+sequence = images.squeeze(1)
+```
 
 ## 4. `[B, 28, 28]` 怎么理解
 
@@ -61,6 +77,17 @@ sequence = images.squeeze(1)
 - `B`：一个 batch 中有多少张图片。
 - 第一个 `28`：序列长度，也就是 28 个时间步。
 - 第二个 `28`：每个时间步输入 28 个像素。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：`batch_first=True` 表示输入格式是 `[batch, sequence_length, input_size]`。
+
+```python
+self.rnn = nn.RNN(
+    input_size=input_size,
+    hidden_size=hidden_size,
+    batch_first=True,
+)
+```
 
 ## 5. 按行读取是什么意思
 
@@ -91,6 +118,15 @@ RNN 读取顺序：
 - 下面可能是下半圆。
 
 RNN 逐行读取时，隐藏状态可以保存前面行的信息，逐步形成对整个数字形状的理解。
+对应文件：`experiment_2_rnn/src/models.py`
+
+对应代码片段：读完所有行后，取最后时间步作为整张图的表示。
+
+```python
+outputs, _ = self.rnn(sequence)
+final_output = outputs[:, -1, :]
+return self.classifier(final_output)
+```
 
 ## 7. 这种方法的局限
 
@@ -109,3 +145,7 @@ RNN 按行读取时，更强调行与行之间的顺序关系。
 ## 8. 你要能现场讲的一段话
 
 > MNIST 原始输入是 `[B, 1, 28, 28]`。因为它只有一个灰度通道，所以我用 `squeeze(1)` 去掉通道维度，得到 `[B, 28, 28]`。对 RNN 来说，这表示序列长度为 28，每个时间步输入一行 28 个像素。RNN 从上到下逐行读取图片，并用隐藏状态保存已经读取过的行的信息。
+
+
+
+

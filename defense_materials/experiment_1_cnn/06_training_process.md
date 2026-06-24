@@ -1,4 +1,4 @@
-# 06 训练流程与实验规范
+﻿# 06 训练流程与实验规范
 
 ## 1. 训练代码位置
 
@@ -30,6 +30,15 @@ python experiment_1_cnn/src/train.py --experiment-name cnn_kernel_5x5_comparison
 这样不用改代码就能做不同实验。
 
 实验名称会创建独立目录，避免结果互相覆盖。
+对应文件：`experiment_1_cnn/src/train.py`、`experiment_1_cnn/src/config.py`
+
+对应代码片段：命令行实验名经过清洗后传给 `configure_run()`，用于隔离输出目录。
+
+```python
+raw_name = args.experiment_name or f"cnn_k{config.conv_kernel_size}_b{config.conv_blocks}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+experiment_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", raw_name).strip("._")
+config.configure_run(experiment_name)
+```
 
 ## 3. 一个 Epoch 是什么
 
@@ -82,6 +91,17 @@ PyTorch 默认梯度会累加，所以每个 batch 前要清空。
 ### optimizer.step()
 
 优化器根据梯度更新参数。
+对应文件：`experiment_1_cnn/src/train.py`
+
+对应代码片段：这就是一个 batch 的核心训练过程。
+
+```python
+optimizer.zero_grad()
+logits = model(images)
+loss = criterion(logits, labels)
+loss.backward()
+optimizer.step()
+```
 
 ## 5. CrossEntropyLoss
 
@@ -162,6 +182,16 @@ if val_acc > best_val_acc:
 你的 `3x3` 基线中，第 9 轮验证准确率最高，第 10 轮反而下降。
 
 所以最终测试应该加载验证集最好的模型，而不是最后一轮模型。
+对应文件：`experiment_1_cnn/src/train.py`
+
+对应代码片段：验证准确率超过历史最好时保存 `best_simple_cnn.pth`。
+
+```python
+if val_acc > best_val_acc:
+    best_val_acc = val_acc
+    best_epoch = epoch
+    torch.save(checkpoint, config.best_model_path)
+```
 
 ## 9. latest checkpoint 是什么
 
@@ -203,3 +233,6 @@ figures/confusion_matrix.png
 你可以在答辩中主动说：
 
 > 我的实验使用固定随机种子、独立验证集和测试集、按实验名称隔离输出目录，并自动记录配置、硬件、参数量、训练时间和最终指标。这些设计保证了实验结果更容易复现，也方便做公平对比。
+
+
+

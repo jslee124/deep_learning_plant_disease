@@ -1,4 +1,4 @@
-# 05 SimpleCNN 模型代码详解
+﻿# 05 SimpleCNN 模型代码详解
 
 ## 1. 模型代码位置
 
@@ -13,6 +13,17 @@ class SimpleCNN(nn.Module)
 ```
 
 这个模型故意没有写得很复杂，因为课程实验更重要的是能解释每一层。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：模型的主体就是 `SimpleCNN`，前半部分是 `features`，后半部分是 `classifier`。
+
+```python
+class SimpleCNN(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+```
 
 ## 2. 初始化参数
 
@@ -55,6 +66,15 @@ padding = conv_kernel_size // 2
 ```
 
 可以保持卷积前后尺寸不变。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：奇数卷积核配合 `padding = conv_kernel_size // 2`，用于公平比较 `3x3` 和 `5x5`。
+
+```python
+if conv_kernel_size < 1 or conv_kernel_size % 2 == 0:
+    raise ValueError("卷积核大小必须是正奇数，例如 3 或 5。")
+padding = conv_kernel_size // 2
+```
 
 ## 4. 通道数量如何变化
 
@@ -99,6 +119,20 @@ Conv2d -> BatchNorm2d -> ReLU
 ```
 
 前 3 个卷积块后面有池化，最后一个没有。
+对应文件：`experiment_1_cnn/src/models.py`
+
+对应代码片段：`block_index < conv_blocks - 1` 这句控制最后一个卷积块不加池化。
+
+```python
+for block_index, out_channels in enumerate(channel_options[:conv_blocks]):
+    feature_layers.extend([
+        nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, padding=padding),
+        nn.BatchNorm2d(out_channels),
+        nn.ReLU(inplace=True),
+    ])
+    if block_index < conv_blocks - 1:
+        feature_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+```
 
 ## 6. 为什么最后用 AdaptiveAvgPool2d
 
@@ -177,6 +211,15 @@ def forward(self, x):
 训练时直接交给 `CrossEntropyLoss`。
 
 预测展示时才用 `softmax` 转成概率。
+对应文件：`experiment_1_cnn/src/train.py`、`experiment_1_cnn/src/predict.py`
+
+对应代码片段：训练时直接把 logits 交给 `CrossEntropyLoss`，预测展示时再 softmax。
+
+```python
+loss = criterion(logits, labels)
+
+probabilities = torch.softmax(logits, dim=1).squeeze(0)
+```
 
 ## 9. 张量形状完整变化
 
@@ -205,3 +248,7 @@ def forward(self, x):
 ## 10. 你要能现场讲的一段话
 
 > 我的模型是一个教学型 SimpleCNN。输入是 `[B, 3, 224, 224]` 的 RGB 图片。前面用 4 个卷积块逐步提取特征，通道数从 32 增加到 256，池化层逐步降低空间尺寸。然后用自适应平均池化把每个通道压缩成一个值，再经过全连接层输出 38 个类别的 logits。
+
+
+
+

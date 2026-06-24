@@ -1,4 +1,4 @@
-# 08 特征图可视化与单张预测
+﻿# 08 特征图可视化与单张预测
 
 ## 1. 为什么要做特征图可视化
 
@@ -19,6 +19,18 @@ experiment_1_cnn/src/visualize_features.py
 ## 2. forward hook 是什么
 
 脚本使用 forward hook 获取卷积层输出。
+对应文件：`experiment_1_cnn/src/visualize_features.py`
+
+对应代码片段：遇到 `nn.Conv2d` 时注册 forward hook，把输出保存到 `activations`。
+
+```python
+if isinstance(module, nn.Conv2d):
+    hooks.append(
+        module.register_forward_hook(
+            lambda _, __, output, layer_name=name: activations.append((layer_name, output.detach().cpu()))
+        )
+    )
+```
 
 简单理解：
 
@@ -143,7 +155,18 @@ torch.softmax(logits, dim=1)
 把它变成概率分布。
 
 然后取概率最高的类别作为预测结果。
+对应文件：`experiment_1_cnn/src/predict.py`
+
+对应代码片段：预测展示时才把 logits 转成概率并取 Top-K。
+
+```python
+logits = model(image_tensor)
+probabilities = torch.softmax(logits, dim=1).squeeze(0)
+top_probabilities, top_indices = torch.topk(probabilities, k=top_k)
+```
 
 ## 9. 你要能讲的一段话
 
 > 我使用特征图可视化观察了 CNN 中间层输出。浅层卷积主要保留叶片边缘、叶脉和病斑纹理，深层卷积经过多次卷积和池化后变得更抽象，更关注与类别判断相关的区域。单张图片预测时，我加载验证集最佳模型，并使用与测试集一致的预处理，最后通过 softmax 输出 Top-K 置信度。
+
+
